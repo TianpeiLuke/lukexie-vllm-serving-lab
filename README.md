@@ -48,7 +48,17 @@ vllm serve Qwen/Qwen3-0.6B --host 127.0.0.1 --max-model-len 8192
 curl http://127.0.0.1:8000/v1/models
 ```
 
-**GPU:** adapt [Modal's vLLM example](https://modal.com/docs/examples/vllm_inference) to an L4 and `Qwen/Qwen3-8B` with `--max-model-len 8192`, then `modal deploy`. Stop the app after each session.
+**GPU** (`server/vllm_modal.py`, adapted from [Modal's vLLM example](https://modal.com/docs/examples/vllm_inference): one L4, `Qwen/Qwen3-8B`, `--max-model-len 8192`, one container, API key required):
+
+```bash
+uv sync
+uv run modal setup                                   # once: log in to Modal
+printf 'VLLM_API_KEY=%s\n' "$(openssl rand -hex 24)" > .env   # once; .env is gitignored
+uv run --env-file .env sh -c 'modal secret create vllm-api-key VLLM_API_KEY="$VLLM_API_KEY"'
+uv run --env-file .env modal run server/vllm_modal.py      # temporary server + smoke test
+uv run --env-file .env modal deploy server/vllm_modal.py   # persistent endpoint
+uv run modal app stop vllm-serving-lab                     # stop after each session
+```
 
 ## Benchmark Workload
 
