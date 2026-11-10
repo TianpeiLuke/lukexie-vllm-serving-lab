@@ -2,6 +2,17 @@
 
 Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Names in *italics* are notes in the Obsidian vault.
 
+## Status (2026-11-10, 15:10)
+
+| Step | State |
+| --- | --- |
+| MVP (M1): deploy and chat | **done**: Qwen3-8B answered on an L4 (14:05) and on an A10G (14:43); `client/chat.py` takes multi-line pastes |
+| 0. Freeze the working state | **partly**: the app scales to zero by itself (`min_containers` unset); the commit of today's work is still to do |
+| 1. `results/record.py` | **done**: 3 tests pass |
+| 2. `client/timing.py` | **done**: 13 tests pass (16 in total) |
+| 3. Live checks of the client | **done early** on the A10G: exact prompt and output lengths |
+| 4–10 | to do; S3 starts at Step 4 |
+
 ## Summary
 
 > **How this plan is built**
@@ -13,8 +24,8 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 > **Schedule**
 > | Session | Steps | GPU |
 > | --- | --- | --- |
-> | **S2 rest of today, Tue Nov 10, until 3:00** | 0, 1, 2 | stop the app first; none needed |
-> | **S3 Thu Nov 12, 1:00–3:00** | 3, 4, 5, 6 | one start, about 80 min on |
+> | **S2 Tue Nov 10** (done, ran to about 3:10) | 1, 2, and 3 early; 0 partly (commit pending) | about 1 GPU hour in all: L4 about 20 min, A10G about 40 min (until it scales down, about 15:21) |
+> | **S3 Thu Nov 12, 1:00–3:00** | 4, 5, 6 | one start, about 70 min on |
 > | **S4 Fri Nov 13, 1:00–3:00** | 7, 8, 9 | three restarts, about 60 min on |
 > | spare / next mock slot | 10 | none |
 >
@@ -24,7 +35,7 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 
 | Metric | Needs | Step |
 | --- | --- | --- |
-| M1 server answers | deployed server, chat client | 0 (passed today) |
+| M1 server answers | deployed server, chat client | **passed 2026-11-10** (the MVP) |
 | M2 client agrees with `vllm bench serve` | `timing.py`, `load.py`, a way to run `vllm bench serve`, both at 1 user | 2, 3, 4, 5 |
 | M3 batching gain at 16 users | concurrency sweep with `load.py` | 6 |
 | M4 KV cache explained | start-up log line, estimate | done (passes after the GiB correction); restate in the README in step 9 |
@@ -34,7 +45,7 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 | M8 reproducible | `record.py` with the command per row, README | 1, 9 |
 | M9 cost | cost log per session | every GPU step; total in 9 |
 | M10 no secrets | key only in `.env` and the Modal secret | checked at every commit |
-| M11 tests pass | unit tests for the pure functions | 1, 2, 7 |
+| M11 tests pass | unit tests for the pure functions | 1 and 2 done (16 pass); 7 still to add |
 
 ## Steps
 
@@ -42,9 +53,13 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 
 - **Do:** stop the app (`uv run modal app stop vllm-serving-lab`, then `uv run modal container list` is empty). Log today's GPU minutes in the cost table of *P1 vLLM Serving - Tasks and Experiments*. Commit `SPEC.md`, `client/chat.py` and the `server/vllm_modal.py` change on a branch `s2-live-endpoint`.
 - **Decide:** keep `min_containers=1` out of the code and set it with the override only during sessions. A deploy then never leaves a GPU running by accident.
+- **Learned 2026-11-10:** the deploys that started no container were waiting for a free L4 (the app log said "waiting to be scheduled on a GPU_L4 worker"), not blocked by autoscaling. `GPU = ["L4", "A10"]` now falls back to an A10G; with `min_containers` unset, a request starts a container on demand.
+- **State:** the app scales to zero after 15 idle minutes. **Still to do:** commit Steps 1–3, `client/chat.py`, the GPU list and the plan and spec edits.
 - **Done when:** zero containers; the M10 grep (in `SPEC.md`) finds nothing; the commit is pushed.
 
 ### Step 1. Results File: `results/record.py` and Its Test (S2, 20 min, no GPU)
+
+**Done 2026-11-10 15:00:** `uv run pytest tests/test_record.py` gives 3 passed. The `env` column records the GPU that ran (`L4` or `A10G`), because the server can land on either.
 
 - **Do:** `append_result(row, path)` with the fixed `COLUMNS`; header on a new file; `ValueError` on a missing or unknown column.
 - **Test:** `tests/test_record.py` with `tmp_path`: the header written once, two rows appended, a bad row rejected.
@@ -53,6 +68,8 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 
 ### Step 2. Timing Math: `client/timing.py` and Its Test (S2, 30 min, no GPU)
 
+**Done 2026-11-10 15:06:** `uv run pytest` gives 16 passed (13 in `tests/test_timing.py`, including `stream_and_time` on replayed vLLM events through a mock transport). One timestamp is taken per generated token: each text chunk, plus the finish chunk of the end-of-turn token, which has no text but counts in `completion_tokens`.
+
 - **Do:** the pure functions first: `ttft_tpot`, `percentile`, `summarize`, and the `RequestTiming` dataclass. Then `make_prompt` (deterministic for a seed) and `stream_and_time`, which can only be checked live.
 - **Test:** `tests/test_timing.py`: hand-made token times (none, one, many), `percentile` against `numpy.percentile` at q = 50 and 95, `summarize` on three fake timings with a known throughput.
 - **Done when:** `uv run pytest` passes. `client/chat.py` still runs; it may reuse `stream_and_time`.
@@ -60,11 +77,27 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 
 ### Step 3. Live Checks of the Client (S3, 15 min, GPU on)
 
+**Both checks passed early, 2026-11-10 15:06, on the A10G that was still up:**
+
+| `make_prompt(n)` | prompt tokens | output tokens (`max_tokens=200`, `ignore_eos`) | TTFT | TPOT |
+| --- | --- | --- | --- | --- |
+| 500 | 500 | 200 | 757 ms | 34.3 ms |
+| 2000 | 2000 | 200 | 1238 ms | 34.8 ms |
+
+The longer prompt raised TTFT but not TPOT: prefill grows with the prompt, while decode does not (a first look at E6). These are one-off A10G numbers, not results-table rows.
+
 - **Do:** start the server (launch checklist: deploy, `min_containers=1`, the four live checks). Then run two live checks:
   - `make_prompt(500)` gives 475–525 prompt tokens by the server's `usage`;
   - `stream_and_time(..., max_tokens=200, ignore_eos=True)` returns exactly 200 output tokens.
 - **Done when:** both checks pass. If the prompt length is off, calibrate words per token for Qwen's tokenizer once and fix `make_prompt`.
 - **Cost note:** each start costs about 1–7 min of waiting for a GPU plus about 4 min of loading. Do all GPU steps of a session in one start.
+
+### GPU for the Measured Runs (decide at the start of S3)
+
+The server can now land on an L4 or an A10G, and their numbers can't share a table (decode speed follows memory bandwidth: 300 vs 600 GB/s).
+- **Prefer the L4,** which the predictions and S1 used. Check with `uv run modal container exec <id> -- nvidia-smi --query-gpu=name --format=csv,noheader`.
+- **If the session lands on an A10G,** run the whole sweep there and write `A10G` in the `env` column. Rows within one GPU are comparable; rows across GPUs are not.
+- **To force the L4,** set `GPU = "L4"` for the session, and accept the wait if none is free.
 
 ### Step 4. Own Load Generator at 1 User: `bench/load.py` (S3, 25 min, GPU on)
 
@@ -74,6 +107,7 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 
 > **Prediction to check: TPOT at 1 user is bandwidth-bound**
 > Each decode step reads all weights once: $16.4\ \text{GB} / 300\ \text{GB/s}$ (L4 memory bandwidth) $\approx 55\ \text{ms}$. Expect a TPOT p50 of about 55–65 ms. A 1-user run then takes about 20 × 200 × 0.06 s ≈ 4 min.
+> On an A10G the same bound is 16.4 / 600 ≈ 27 ms. Measured from the Mac on 2026-11-10: **34.3 ms**, so about 7 ms per token above the bound. The gap is something to explain (A10G bandwidth below the A10 spec, kernel overhead, the network).
 
 ### Step 5. Benchmark Tool and the M2 Comparison (S3, 30 min, GPU on)
 
@@ -130,14 +164,15 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 ## What Is Left Out
 
 - **The Mac (vllm-metal) rows, T2–T6 of the task list,** are not needed for any metric. They are optional after P1, as a comparison.
-- **E5 (FP8) and E6 (long prompts)** are not planned: three experiments are enough for M6.
+- **E5 (FP8) and E6 (long prompts)** are not planned: three experiments are enough for M6. E5 needs an L4 (the A10G has no FP8). A first look at E6 came from Step 3: TTFT 757 → 1238 ms from 500 to 2000 prompt tokens, with TPOT unchanged.
 - **Pass rule:** a metric that fails is recorded with its cause, not hidden. P1 can close with a documented miss, as M4 first did.
 
 ## Risks
 
 | Risk | Effect | Plan |
 | --- | --- | --- |
-| no container starts after a deploy (2026-11-10) | lost GPU-session minutes | `min_containers=1` override at the start of each session; check `modal container list` |
+| no free L4 on Modal (2026-11-10: no container for 8 min, twice) | lost GPU-session minutes | `GPU = ["L4", "A10"]` fallback; read `modal app logs` for "waiting to be scheduled"; `min_containers=1` to start at once |
+| the GPU type changes between sessions | rows that look comparable but are not | check `nvidia-smi` in the container; write the GPU in `env`; never mix GPUs in one comparison |
 | `vllm bench serve` does not run on a CPU container | M2 blocked | fallback: `modal container exec` inside the server container |
 | network time distorts the M2 comparison | false miss | same placement for both tools, or compare TPOT and TTFT minus the round trip |
 | an experiment flag is spelled wrong for 0.21.0 | the server fails to start, wasting a restart | check `vllm serve --help` in the container before S4 |

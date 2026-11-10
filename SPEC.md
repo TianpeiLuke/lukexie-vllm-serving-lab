@@ -13,6 +13,17 @@ Status as of 2026-11-10. The plan and the session history live in the Obsidian v
 
 Out of scope: multi-GPU, LoRA serving, speculative decoding, Kubernetes, building vLLM from source.
 
+**MVP: start the server and chat with it** (metric M1). Reached 2026-11-10 and repeated the same day:
+
+```bash
+uv run modal deploy server/vllm_modal.py
+uv run python -c "import modal; modal.Server.from_name('vllm-serving-lab', 'Server').update_autoscaler(min_containers=1)"
+uv run --env-file .env python client/chat.py
+uv run modal app stop vllm-serving-lab
+```
+
+The second line forces a container to start now. On 2026-11-10 no container started for minutes after two deploys because Modal had no free L4 (the app log said "waiting to be scheduled on a GPU_L4 worker"). With `GPU = ["L4", "A10"]`, a container started on demand and landed on an A10G. The `target_concurrency=0.0` printed by the deprecated `update_autoscaler()` is how Modal stores "unset"; `server.autoscaler.settings()` returns `None`. Everything after the MVP measures and explains the server.
+
 ## 2. Success Metrics
 
 P1 is done when every row passes. Measure on the fixed baseline workload (section 5) unless the row says otherwise.
@@ -53,7 +64,7 @@ P1 is done when every row passes. Measure on the fixed baseline workload (sectio
 ```python
 MODEL_NAME: str = "Qwen/Qwen3-8B"
 MODEL_REVISION: str                      # pinned commit of the weights
-GPU: str = "L4"
+GPU: list[str] = ["L4", "A10"]           # first free type; record which one ran (L4 300 GB/s, A10G 600 GB/s)
 VLLM_PORT: int = 8000
 ENGINE_ARGS: list[str]                   # ["--max-model-len", "8192", "--gpu-memory-utilization", "0.90"]
 
@@ -83,6 +94,9 @@ def ask(messages: list[dict], max_tokens: int = 512) -> str: ...
     # stream one answer, print it, then TTFT, tokens, TPOT, prompt tokens; return the text
 def wait_until_healthy(timeout_s: float = 1200, poll_s: float = 10) -> None: ...
     # 503 and transport errors mean not ready; raise TimeoutError at the deadline
+def read_message(prompt: str = "\nyou> ") -> str: ...
+    # one typed line, or a whole pasted block (blank lines included) as one message;
+    # the live chat quits on /quit or Ctrl-D, and skips empty messages
 ```
 
 ### What We Want

@@ -18,7 +18,7 @@ import modal
 
 MODEL_NAME = "Qwen/Qwen3-8B"
 MODEL_REVISION = "b968826d9c46dd6066d109eabc6255188de91218"  # pin so reruns use the same weights
-GPU = "L4"
+GPU = ["L4", "A10"]  # first free one; benchmarks must record which GPU ran (L4: 300 GB/s, A10: 600 GB/s)
 VLLM_PORT = 8000
 MINUTES = 60
 

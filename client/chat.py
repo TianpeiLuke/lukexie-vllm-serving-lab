@@ -1,12 +1,15 @@
 """Chat with the vLLM server and print TTFT, output tokens and TPOT per answer.
 
 One prompt:  uv run --env-file .env python client/chat.py "Explain the KV cache."
-Live chat:   uv run --env-file .env python client/chat.py      (empty line to quit)
+Live chat:   uv run --env-file .env python client/chat.py      (/quit or Ctrl-D to quit)
+
+In the live chat a pasted block of lines, blank lines included, is sent as one message.
 
 VLLM_API_KEY comes from .env; VLLM_BASE_URL defaults to the deployed Modal endpoint.
 """
 
 import os
+import select
 import sys
 import time
 
@@ -62,12 +65,27 @@ def wait_until_healthy(timeout_s=20 * 60, poll_s=10):
     raise TimeoutError(f"{BASE_URL} did not become healthy in {timeout_s} s")
 
 
+def read_message(prompt="\nyou> "):
+    """One typed line, or a whole pasted block: lines already waiting on stdin join the first one."""
+    lines = [input(prompt)]
+    while select.select([sys.stdin], [], [], 0.05)[0]:  # more input within 50 ms: the rest of a paste
+        line = sys.stdin.readline()
+        if not line:  # end of input
+            break
+        lines.append(line.rstrip("\n"))
+    return "\n".join(lines).strip()
+
+
 if __name__ == "__main__":
     wait_until_healthy()
     if len(sys.argv) > 1:
         ask([{"role": "user", "content": " ".join(sys.argv[1:])}])
         sys.exit()
     messages = []
-    while prompt := input("\nyou> ").strip():
-        messages.append({"role": "user", "content": prompt})
-        messages.append({"role": "assistant", "content": ask(messages)})
+    try:
+        while (prompt := read_message()) != "/quit":
+            if prompt:  # skip empty messages instead of quitting on them
+                messages.append({"role": "user", "content": prompt})
+                messages.append({"role": "assistant", "content": ask(messages)})
+    except EOFError:  # Ctrl-D
+        pass
