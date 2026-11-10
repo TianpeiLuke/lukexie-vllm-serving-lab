@@ -163,14 +163,16 @@ class BenchResult:
     duration_s: float      # first request sent → last request finished
     timings: list[RequestTiming]
 
-async def run_load(base_url: str, api_key: str, concurrency: int, num_prompts: int,
-                   input_len: int = 500, output_len: int = 200, seed: int = 0) -> BenchResult: ...
-    # AsyncOpenAI; an asyncio.Semaphore(concurrency) caps requests in flight;
-    # prompts from make_prompt(input_len, seed + i); a failed request is counted, not raised
+def run_load(client: OpenAI, concurrency: int, num_prompts: int,
+             input_len: int = 500, output_len: int = 200, seed: int = 0) -> BenchResult: ...
+    # a ThreadPoolExecutor(max_workers=concurrency) runs the tested stream_and_time, so the pool size
+    # caps requests in flight; prompts from make_prompt(input_len, seed + i); a failed request is counted, not raised
+    # (changed 2026-11-10 from AsyncOpenAI + Semaphore: reuses the timing code instead of an async copy)
 
 def main(argv: list[str] | None = None) -> None: ...
-    # uv run --env-file .env python bench/load.py --concurrency 1 4 16 64 [--setting baseline]
-    # one warm-up request first (discarded), then one run per concurrency; appends rows with record.append_result
+    # uv run --env-file .env python -m bench.load --env L4 --concurrency 1 4 16 64 [--setting baseline]
+    # --env is the GPU name (required); one warm-up request first (discarded); each run gets its own prompts
+    # (seed * 1e6 + concurrency * 1000 + i) so prefix caching can't reuse an earlier run's; appends rows with append_result
 ```
 
 **I4. `bench/vllm_bench_modal.py`**

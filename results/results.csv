@@ -1,0 +1,5 @@
+timestamp,env,model,setting,users,num_prompts,failed,ttft_p50_ms,ttft_p95_ms,tpot_p50_ms,output_tok_s,tool,vllm_version,command
+2026-11-10T15:14:27,A10G,Qwen/Qwen3-8B,baseline,1,20,0,491.3,522.1,34.5,27.3,load.py,0.21.0,python -m bench.load --env A10G --concurrency 1
+2026-11-10T15:19:23,A10G,Qwen/Qwen3-8B,baseline,4,100,0,677.6,870.8,37.6,98.2,load.py,0.21.0,python -m bench.load --env A10G --concurrency 4 16 64
+2026-11-10T15:20:32,A10G,Qwen/Qwen3-8B,baseline,16,100,0,1407.9,2253.1,44.1,287.3,load.py,0.21.0,python -m bench.load --env A10G --concurrency 4 16 64
+2026-11-10T15:21:20,A10G,Qwen/Qwen3-8B,baseline,64,100,0,13785.9,17988.4,63.9,418.8,load.py,0.21.0,python -m bench.load --env A10G --concurrency 4 16 64
