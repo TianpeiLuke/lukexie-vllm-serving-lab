@@ -52,7 +52,6 @@ app = modal.App("vllm-serving-lab")
     },
     port=VLLM_PORT,
     max_containers=1,  # one GPU only, so benchmarks measure a single vLLM engine
-    target_concurrency=0,  # no autoscaling
     scaledown_window=15 * MINUTES,
     startup_timeout=20 * MINUTES,  # the first start downloads about 16 GB
     unauthenticated=True,  # Modal's proxy is open; vLLM checks the API key
