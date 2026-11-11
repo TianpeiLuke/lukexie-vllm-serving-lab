@@ -2,19 +2,19 @@
 
 Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Names in *italics* are notes in the Obsidian vault.
 
-## Status (2026-11-10, 15:40)
+## Status (2026-11-10, 16:05)
 
 | Step | State |
 | --- | --- |
 | MVP (M1): deploy and chat | **done**: Qwen3-8B answered on an L4 (14:05) and on an A10G (14:43); `client/chat.py` takes multi-line pastes |
 | 0. Freeze the working state | **partly**: the app scales to zero by itself (`min_containers` unset); the commit of today's work is still to do |
 | 1. `results/record.py` | **done**: 3 tests pass |
-| 2. `client/timing.py` | **done**: 13 tests pass (18 in total with `test_load.py`) |
+| 2. `client/timing.py` | **done**: 13 tests pass (20 in total) |
 | 3. Live checks of the client | **done early** on the A10G: exact prompt and output lengths |
 | 4. `bench/load.py` at 1 user | **done** on the A10G: 0 failed, TPOT p50 34.5 ms |
-| 5. `vllm bench serve` and M2 | to do; S3 starts here |
+| 5. `vllm bench serve` and M2 | **done early** on the A10G (15:57–16:01): M2 passes, TTFT p50 within 7.6%, TPOT p50 within 0.9% |
 | 6. Concurrency sweep | **done early** on the A10G (15:15–15:21): 4, 16 and 64 users, 0 failed; M3 passes (10.5×) |
-| 7–10 | to do; the 64-user engine log already previews M5 |
+| 7–10 | to do; S3 starts at Step 7 (`bench/metrics.py`). The 64-user engine log already previews M5 |
 
 ## Summary
 
@@ -27,8 +27,8 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 > **Schedule**
 > | Session | Steps | GPU |
 > | --- | --- | --- |
-> | **S2 Tue Nov 10** (done, ran to about 3:25) | 1, 2, 4, and 3 and 6 early; 0 partly (commit pending) | about 1 GPU hour in all: L4 about 20 min, A10G about 40 min (until it scales down, about 15:21) |
-> | **S3 Thu Nov 12, 1:00–3:00** | 5 (and the L4 rows of 4 and 6 if the session gets an L4) | one start, about 60 min on |
+> | **S2 Tue Nov 10** (done, ran to about 4:05) | 1, 2, 4, and 3, 5 and 6 early; 0 partly (commit pending) | about 1.7 GPU hours in all: L4 about 20 min, A10G about 60 min (sweep) and about 23 min (M2) |
+> | **S3 Thu Nov 12, 1:00–3:00** | 7, then 8 (and the L4 rows of 4–6 if the session gets an L4) | one start, about 60 min on |
 > | **S4 Fri Nov 13, 1:00–3:00** | 7, 8, 9 | three restarts, about 60 min on |
 > | spare / next mock slot | 10 | none |
 >
@@ -39,16 +39,16 @@ Step-by-step plan derived from the success metrics in [`SPEC.md`](SPEC.md). Name
 | Metric | Needs | Step |
 | --- | --- | --- |
 | M1 server answers | deployed server, chat client | **passed 2026-11-10** (the MVP) |
-| M2 client agrees with `vllm bench serve` | `timing.py`, `load.py`, a way to run `vllm bench serve`, both at 1 user | 2, 3, 4 done; 5 to do |
+| M2 client agrees with `vllm bench serve` | `timing.py`, `load.py`, a way to run `vllm bench serve`, both at 1 user | **passed 2026-11-10** (step 5, A10G): TTFT p50 194.5 vs 180.8 ms (7.6%), TPOT p50 33.7 vs 33.4 ms (0.9%) |
 | M3 batching gain at 16 users | concurrency sweep with `load.py` | **passed 2026-11-10** (step 6, A10G): 287.3 ÷ 27.3 = 10.5× output tokens/s, pass line 4× |
 | M4 KV cache explained | start-up log line, estimate | done (passes after the GiB correction); restate in the README in step 9 |
 | M5 where it queues | `metrics.py`, a 64-user run with polling | 7 to do. Preview from the engine log: Waiting up to 36, KV usage 99.8%, 29 preemptions, TTFT p50 13.8 s |
 | M6 three experiments | experiments by name in the server, three runs at 16 users | 8 |
-| M7 no failed requests | `failed` counted in every run | so far: 0 failed in all 4 rows (steps 4 and 6); 5, 7, 8 to do |
+| M7 no failed requests | `failed` counted in every run | so far: 0 failed in all 6 rows (steps 4, 5 and 6); 7, 8 to do |
 | M8 reproducible | `record.py` with the command per row, README | 1 done (every row has its command); README in 9 |
 | M9 cost | cost log per session | S2 logged (L4 about \$0.25, A10G about \$0.75, sweep included); total in 9 |
 | M10 no secrets | key only in `.env` and the Modal secret | checked at every commit; key grep clean on 2026-11-10 15:40 (before the next commit) |
-| M11 tests pass | unit tests for the pure functions | 1, 2 and 4 done (18 pass); 7 still to add |
+| M11 tests pass | unit tests for the pure functions | 1, 2, 4 and 5 done (20 pass); 7 still to add |
 
 ## Steps
 
@@ -115,6 +115,16 @@ The server can now land on an L4 or an A10G, and their numbers can't share a tab
 > On an A10G the same bound is 16.4 / 600 ≈ 27 ms. Measured from the Mac on 2026-11-10: **34.3 ms**, so about 7 ms per token above the bound. The gap is something to explain (A10G bandwidth below the A10 spec, kernel overhead, the network).
 
 ### Step 5. Benchmark Tool and the M2 Comparison (S3, 30 min, GPU on)
+
+**Done 2026-11-10 15:57–16:01, on the A10G:** `uv run --env-file .env modal run -m bench.vllm_bench_modal --env A10G` (option 1). Both tools ran **from the same Modal CPU container**, one after the other, 20 prompts each, 0 failed; both saw 500 prompt tokens (the server's `usage`).
+
+| Tool | TTFT p50 | TTFT p95 | TPOT p50 | Output tok/s |
+| --- | ---: | ---: | ---: | ---: |
+| `vllm bench serve` | 180.8 ms | 295.2 ms | 33.4 ms | 29.2 |
+| `load.py` | 194.5 ms | 208.5 ms | 33.7 ms | 29.1 |
+| gap | 7.6% | | 0.9% | |
+
+M2 passes. Checked in the vLLM 0.21.0 source first: `vllm bench serve` reads the key from `OPENAI_API_KEY` (no flag), and it ran on a CPU-only container. The same `load.py` from the Mac measured TTFT p50 491 ms, so the Mac adds about 300 ms of network to TTFT and about 1 ms to TPOT. Not explained: `load.py` TTFT is 14 ms higher (the two clients may stamp the first token at different chunks), and `vllm bench serve` has the higher p95 (one slow request out of 20).
 
 - **Do:** run `vllm bench serve` against the endpoint, then compare it with step 4 at 1 user. vLLM is not installed on the Mac, so try these in order:
   1. **`bench/vllm_bench_modal.py`** (I4 in `SPEC.md`): a CPU Modal function in the vLLM image.

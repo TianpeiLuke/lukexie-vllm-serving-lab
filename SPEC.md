@@ -31,7 +31,7 @@ P1 is done when every row passes. Measure on the fixed baseline workload (sectio
 | # | Metric | Pass when | Status 2026-11-10 |
 | --- | --- | --- | --- |
 | M1 | Server answers | `/health` is 200, `/v1/models` lists `Qwen/Qwen3-8B` with the key, and a streamed chat returns text | **pass**: `client/chat.py`, health 200 at 14:05 |
-| M2 | Client agrees with the benchmark tool | at 1 user, TTFT p50 and TPOT p50 from `bench/load.py` are within 10% of `vllm bench serve` | open |
+| M2 | Client agrees with the benchmark tool | at 1 user, TTFT p50 and TPOT p50 from `bench/load.py` are within 10% of `vllm bench serve` | **passed 2026-11-10**: 7.6% (TTFT), 0.9% (TPOT), both from one Modal CPU container |
 | M3 | Batching gain | output tokens/s at 16 users ≥ 4 × the 1-user number | open |
 | M4 | KV cache explained | the estimate is within 20% of the logged `GPU KV cache size`, and the gap is explained | **logged 20,336 tokens**; first estimate 25,000 (23% high, GB vs GiB); the corrected estimate of 22,900 is 13% high: pass after the correction |
 | M5 | Where it queues | during the 64-user run, `/metrics` shows `num_requests_waiting` > 0 and the KV cache usage, explained in one sentence | open |
@@ -48,7 +48,7 @@ P1 is done when every row passes. Measure on the fixed baseline workload (sectio
 | --- | --- | --- | --- |
 | I1 | `server/vllm_modal.py` | experiments selected by name, without editing the arguments by hand | M6 |
 | I2 | `client/timing.py` | time one streamed request; make prompts of a given length; summarize timings | M2, M3 |
-| I3 | `bench/load.py` | my own load generator at a fixed concurrency (AsyncOpenAI) | M2, M3, M7 |
+| I3 | `bench/load.py` | my own load generator at a fixed concurrency (a thread pool) | M2, M3, M7 |
 | I4 | `bench/vllm_bench_modal.py` | run `vllm bench serve` in a CPU container on Modal, since vLLM is not installed on the Mac | M2 |
 | I5 | `bench/metrics.py` | scrape `/metrics` during a run | M5 |
 | I6 | `results/record.py` | append one row per run to `results/results.csv` | M8 |
