@@ -5,3 +5,27 @@ timestamp,env,model,setting,users,num_prompts,failed,ttft_p50_ms,ttft_p95_ms,tpo
 2026-11-10T15:21:20,A10G,Qwen/Qwen3-8B,baseline,64,100,0,13785.9,17988.4,63.9,418.8,load.py,0.21.0,python -m bench.load --env A10G --concurrency 4 16 64
 2026-11-10T16:02:13,A10G,Qwen/Qwen3-8B,baseline,1,20,0,180.8,295.2,33.4,29.2,vllm bench serve,0.21.0,modal run -m bench.vllm_bench_modal --env A10G --concurrency 1 --num-prompts 20
 2026-11-10T16:02:13,A10G,Qwen/Qwen3-8B,baseline,1,20,0,194.5,208.5,33.7,29.1,load.py,0.21.0,modal run -m bench.vllm_bench_modal --env A10G --concurrency 1 --num-prompts 20
+2026-11-10T16:59:01,A10G,Qwen/Qwen3-8B,"continuous batching, fixed output",16,96,0,1199.6,1858.0,43.0,327.7,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T16:59:01,A10G,Qwen/Qwen3-8B,"static batching, fixed output",16,96,0,1376.2,1988.0,42.8,322.1,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T16:59:01,A10G,Qwen/Qwen3-8B,"continuous batching, varied output",16,96,0,478.9,1566.5,47.6,296.0,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T16:59:01,A10G,Qwen/Qwen3-8B,"static batching, varied output",16,96,0,1304.9,2047.4,42.3,212.7,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:08:06,A10G,Qwen/Qwen3-8B,"continuous batching, fixed output",16,96,0,1275.5,1948.8,43.2,324.6,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:08:06,A10G,Qwen/Qwen3-8B,"static batching, fixed output",16,96,0,1343.7,2071.1,43.2,319.5,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:08:06,A10G,Qwen/Qwen3-8B,"continuous batching, varied output",16,96,0,558.6,1773.2,47.4,293.7,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:08:06,A10G,Qwen/Qwen3-8B,"static batching, varied output",16,96,0,1439.7,2096.7,42.4,206.8,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:13:17,A10G,Qwen/Qwen3-8B,"continuous batching, fixed output",16,96,0,1293.2,1974.3,43.4,322.3,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:13:17,A10G,Qwen/Qwen3-8B,"static batching, fixed output",16,96,0,1460.4,2142.6,43.1,316.6,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:13:17,A10G,Qwen/Qwen3-8B,"continuous batching, varied output",16,96,0,574.2,1724.7,46.7,288.2,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:13:17,A10G,Qwen/Qwen3-8B,"static batching, varied output",16,96,0,1464.6,2142.4,42.1,221.9,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:35:34,A10G,Qwen/Qwen3-8B,"continuous batching, fixed output",16,96,0,1304.2,1979.5,43.3,322.9,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:35:34,A10G,Qwen/Qwen3-8B,"static batching, fixed output",16,96,0,1424.7,2098.3,43.2,317.9,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:35:34,A10G,Qwen/Qwen3-8B,"continuous batching, varied output",16,96,0,561.8,1887.4,47.7,277.8,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T17:35:34,A10G,Qwen/Qwen3-8B,"static batching, varied output",16,96,0,1439.8,2090.6,43.6,176.1,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T18:21:38,A10G,Qwen/Qwen3-8B,"continuous batching, fixed output",16,96,0,1633.7,2318.0,42.7,314.4,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T18:21:38,A10G,Qwen/Qwen3-8B,"static batching, fixed output",16,96,0,1687.1,2411.5,43.3,308.3,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T18:21:38,A10G,Qwen/Qwen3-8B,"continuous batching, varied output",16,96,0,914.9,2009.6,47.9,277.2,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T18:21:38,A10G,Qwen/Qwen3-8B,"static batching, varied output",16,96,0,1805.3,2468.3,42.1,187.4,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T18:26:31,A10G,Qwen/Qwen3-8B,"continuous batching, fixed output",16,96,0,1268.9,1817.8,42.8,326.9,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T18:26:31,A10G,Qwen/Qwen3-8B,"static batching, fixed output",16,96,0,1334.6,1901.9,43.1,322.8,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T18:26:31,A10G,Qwen/Qwen3-8B,"continuous batching, varied output",16,96,0,323.2,1588.1,49.4,284.7,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96
+2026-11-10T18:26:31,A10G,Qwen/Qwen3-8B,"static batching, varied output",16,96,0,1186.3,1929.1,42.3,190.2,batching.py,0.21.0,modal run -m bench.batching --env A10G --users 16 --num-prompts 96

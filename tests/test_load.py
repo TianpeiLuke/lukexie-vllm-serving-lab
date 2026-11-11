@@ -10,19 +10,23 @@ from bench.load import run_load
 
 def fake_server(fail_on=None, delay_s=0.05):
     """An OpenAI client on a mock vLLM: 3 output tokens per request; tracks the most requests in flight."""
-    state = {"now": 0, "peak": 0, "prompts": []}
+    state = {"now": 0, "peak": 0, "prompts": [], "max_tokens": [], "log": []}
     lock = threading.Lock()
 
     def handler(request):
-        content = json.loads(request.content)["messages"][0]["content"]
+        body = json.loads(request.content)
+        content = body["messages"][0]["content"]
         with lock:
             state["prompts"].append(content)
+            state["max_tokens"].append(body["max_tokens"])
+            state["log"].append(("start", content))
             state["now"] += 1
             state["peak"] = max(state["peak"], state["now"])
             index = len(state["prompts"]) - 1
         time.sleep(delay_s)  # keep the request in flight so overlap is visible
         with lock:
             state["now"] -= 1
+            state["log"].append(("end", content))
         if index == fail_on:
             return httpx2.Response(500, json={"error": {"message": "boom"}})
         base = {"id": "x", "object": "chat.completion.chunk", "created": 0, "model": "Qwen/Qwen3-8B"}
@@ -51,3 +55,9 @@ def test_failed_request_counted_not_raised():
     result = run_load(client, concurrency=2, num_prompts=5, input_len=50, output_len=3)
     assert (result.num_prompts, result.failed, len(result.timings)) == (5, 1, 4)
     assert all(t.output_tokens == 3 for t in result.timings)
+
+
+def test_output_lens_set_each_request():
+    client, state = fake_server()
+    run_load(client, concurrency=1, num_prompts=3, input_len=50, output_lens=[5, 7, 9])
+    assert state["max_tokens"] == [5, 7, 9]

@@ -31,12 +31,16 @@ class BenchResult:
     timings: list[RequestTiming]
 
 
-def run_load(client: OpenAI, concurrency: int, num_prompts: int,
-             input_len: int = 500, output_len: int = 200, seed: int = 0) -> BenchResult:
-    """Send num_prompts requests with at most concurrency in flight; count failures instead of raising."""
+def run_load(client: OpenAI, concurrency: int, num_prompts: int, input_len: int = 500,
+             output_len: int = 200, seed: int = 0, output_lens: list[int] | None = None) -> BenchResult:
+    """Send num_prompts requests with at most concurrency in flight; count failures instead of raising.
+
+    output_lens, if given, sets each request's output length and overrides output_len.
+    """
     def one(i):
+        n_out = output_lens[i] if output_lens else output_len
         try:
-            return stream_and_time(client, make_prompt(input_len, seed + i), output_len, ignore_eos=True)
+            return stream_and_time(client, make_prompt(input_len, seed + i), n_out, ignore_eos=True)
         except Exception as err:  # a failed request is a result (M7), not a crash
             print(f"request {i} failed: {type(err).__name__}: {err}", file=sys.stderr)
             return None

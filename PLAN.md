@@ -124,7 +124,7 @@ The server can now land on an L4 or an A10G, and their numbers can't share a tab
 | `load.py` | 194.5 ms | 208.5 ms | 33.7 ms | 29.1 |
 | gap | 7.6% | | 0.9% | |
 
-M2 passes. Checked in the vLLM 0.21.0 source first: `vllm bench serve` reads the key from `OPENAI_API_KEY` (no flag), and it ran on a CPU-only container. The same `load.py` from the Mac measured TTFT p50 491 ms, so the Mac adds about 300 ms of network to TTFT and about 1 ms to TPOT. Not explained: `load.py` TTFT is 14 ms higher (the two clients may stamp the first token at different chunks), and `vllm bench serve` has the higher p95 (one slow request out of 20).
+M2 passes. Checked in the vLLM 0.21.0 source first: `vllm bench serve` reads the key from `OPENAI_API_KEY` (no flag), and it ran on a CPU-only container. The same `load.py` from the Mac measured TTFT p50 491 ms, so the Mac adds about 300 ms of network to TTFT and about 1 ms to TPOT. Explained from the server's `/metrics` and log (vault: *P1 Learning Session 1.5*): the server's TTFT was about 120 ms (about 111 ms prefill, 8 ms front-end, 0 queue), so about 60–75 ms of the client TTFT is network; the TPOT gap is about 0.14 ms on the server (step 33.52 against 33.38 ms) plus noise. The role chunk isn't the cause. Still open: the remaining 14 ms of `load.py` TTFT is on the client side (sync SDK and httpx against aiohttp). Side effect found: `vllm bench serve` warms up with its own first prompt, so its first measured request hit the prefix cache (496 of 500 tokens).
 
 - **Do:** run `vllm bench serve` against the endpoint, then compare it with step 4 at 1 user. vLLM is not installed on the Mac, so try these in order:
   1. **`bench/vllm_bench_modal.py`** (I4 in `SPEC.md`): a CPU Modal function in the vLLM image.
